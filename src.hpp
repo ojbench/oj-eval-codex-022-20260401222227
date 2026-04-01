@@ -21,29 +21,37 @@ static int compute_hash(const vector<long long>& A) {
 static pair<int,int> find_extremes(int n) {
     if (n <= 2) return {1, n};
     int a = 1, b = 2;
-    // First pass: use pair (1,2)
-    long long mnv = LLONG_MAX, mxv = LLONG_MIN; int mnidx = -1, mxidx = -1;
-    for (int i = 3; i <= n; ++i) {
-        int s = query(a, b, i);
-        if ((long long)s < mnv) { mnv = s; mnidx = i; }
-        if ((long long)s > mxv) { mxv = s; mxidx = i; }
+    auto scan_pair = [&](int x, int y) {
+        long long mnv = LLONG_MAX, mxv = LLONG_MIN; int mnidx = -1, mxidx = -1;
+        for (int i = 1; i <= n; ++i) if (i != x && i != y) {
+            long long s = query(x, y, i);
+            if (s <= mnv) { mnv = s; mnidx = i; }
+            if (s >= mxv) { mxv = s; mxidx = i; }
+        }
+        return pair<int,int>(mnidx, mxidx);
+    };
+
+    // First scan using (1,2)
+    auto p1 = scan_pair(a, b);
+    int mn1 = p1.first, mx1 = p1.second;
+    if (mn1 == -1 && mx1 == -1) return {a, b};
+
+    // Second scan with updated pair (may include one extreme and one inside)
+    a = (mn1 != -1 ? mn1 : a);
+    b = (mx1 != -1 ? mx1 : b);
+    auto p2 = scan_pair(a, b);
+    int mn2 = p2.first, mx2 = p2.second;
+
+    // If no variability, a and b are already extremes
+    if (mn2 == -1 && mx2 == -1) return {a, b};
+
+    // Final candidates
+    if (mn2 != -1) a = mn2;
+    if (mx2 != -1) b = mx2;
+    if (a == b) {
+        // As a safe guard, pick two distinct indices
+        for (int i = 1; i <= n && a == b; ++i) if (i != a) b = i;
     }
-    a = mnidx; b = mxidx;
-    if (a == -1 || b == -1) {
-        // fallback: pick any different indices
-        a = 1; b = 2;
-    }
-    // Second pass: refine
-    mnv = LLONG_MAX; mxv = LLONG_MIN; mnidx = -1; mxidx = -1;
-    for (int i = 1; i <= n; ++i) if (i != a && i != b) {
-        int s = query(a, b, i);
-        if ((long long)s < mnv) { mnv = s; mnidx = i; }
-        if ((long long)s > mxv) { mxv = s; mxidx = i; }
-    }
-    int a2 = mnidx, b2 = mxidx;
-    if (a2 == -1 || b2 == -1) return {a, b};
-    // Third pass: final candidates
-    a = a2; b = b2;
     return {a, b};
 }
 
