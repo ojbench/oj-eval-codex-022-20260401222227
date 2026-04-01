@@ -83,19 +83,31 @@ int guess(int n, int Taskid) {
 
     A[p] = Ap; A[q] = Aq; A[r] = Ar;
 
-    // Recover others: for each j, (imin,j,p)+(imax,j,p)-S = Aj + Ap
-    for (int j = 1; j <= n; ++j) {
-        if (j == imin || j == imax || j == p || j == q || j == r) continue;
-        long long u1 = query(imin, j, p);
-        long long u2 = query(imax, j, p);
-        long long u = u1 + u2 - S; // Aj + Ap
-        A[j] = u - Ap;
-    }
+    // Recover others using dynamic second-maximum strategy to cut queries
+    // We already have Ap, Aq, Ar; choose current second-maximum among them
+    int smax_idx = p; long long Asmax = Ap;
+    if (Aq > Asmax) { Asmax = Aq; smax_idx = q; }
+    if (Ar > Asmax) { Asmax = Ar; smax_idx = r; }
 
-    // Recover A_min and A_max using p, q
+    // Compute A_min and A_max now (needed for single-query recovery)
     long long mxpq = max(Ap, Aq), mnpq = min(Ap, Aq);
     A[imin] = v_im_pq - mxpq;
     A[imax] = v_iM_pq - mnpq;
+
+    long long Amin = A[imin], Amax = A[imax];
+
+    for (int j = 1; j <= n; ++j) {
+        if (j == imin || j == imax || j == p || j == q || j == r) continue;
+        long long u = query(imax, smax_idx, j); // Amax + min(Asmax, Aj)
+        if (u < Amax + Asmax) {
+            A[j] = u - Amax; // Aj < Asmax
+        } else {
+            // Aj >= Asmax; determine Aj and update second-maximum
+            long long v = query(imin, smax_idx, j); // Amin + max(Asmax, Aj) = Amin + Aj
+            A[j] = v - Amin;
+            if (A[j] > Asmax) { Asmax = A[j]; smax_idx = j; }
+        }
+    }
 
     // Compute hash
     return compute_hash(A, n);
